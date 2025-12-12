@@ -21,10 +21,12 @@ public struct AddAsyncMacro: PeerMacro {
         
         // 3. Extract Generics
         let genericClause = funcDecl.genericParameterClause?.description ?? ""
-        // FIX: Only add a leading space if the where clause actually exists
         let whereClause = funcDecl.genericWhereClause.map { " \($0.description)" } ?? ""
         
-        // 4. Find the completion handler
+        // 4. Check if this is a Protocol Requirement (No Body)
+        let isProtocolRequirement = funcDecl.body == nil
+        
+        // 5. Find the completion handler
         guard let completionParam = params.last else {
             throw CustomError.message("Function must have parameters.")
         }
@@ -56,13 +58,7 @@ public struct AddAsyncMacro: PeerMacro {
             isResult = false
         }
         
-        // 5. Construct Call Arguments
-        let callArguments = params.dropLast().map { param in
-            let label = param.firstName.text != "_" ? "\(param.firstName.text): " : ""
-            return "\(label)\(param.secondName?.text ?? param.firstName.text)"
-        }.joined(separator: ", ")
-        
-        // 6. Construct New Parameters (Clean String)
+        // 6. Clean Parameters (Remove completion + trailing comma)
         let paramsToKeep = Array(params.dropLast())
         let newParamsString = paramsToKeep.enumerated().map { index, param in
             var p = param
@@ -70,8 +66,27 @@ public struct AddAsyncMacro: PeerMacro {
             return p.description
         }.joined()
         
-        // 7. Generate Body
-        // FIX: Removed the hardcoded space before \(raw: whereClause)
+        // 7. Generate Code
+        
+        // CASE A: Protocol Requirement (Generate Signature ONLY)
+        if isProtocolRequirement {
+            if isResult {
+                return [
+                    "\(raw: modifiers)func \(raw: funcName)\(raw: genericClause)(\(raw: newParamsString)) async throws -> \(returnType)\(raw: whereClause)"
+                ]
+            } else {
+                return [
+                    "\(raw: modifiers)func \(raw: funcName)\(raw: genericClause)(\(raw: newParamsString)) async -> \(returnType)\(raw: whereClause)"
+                ]
+            }
+        }
+        
+        // CASE B: Implementation (Generate Body)
+        let callArguments = params.dropLast().map { param in
+            let label = param.firstName.text != "_" ? "\(param.firstName.text): " : ""
+            return "\(label)\(param.secondName?.text ?? param.firstName.text)"
+        }.joined(separator: ", ")
+        
         if isResult {
             return [
                 """

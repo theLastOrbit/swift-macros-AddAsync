@@ -11,9 +11,9 @@ Stop writing boilerplate `withCheckedContinuation` wrappers manually. Let the co
 ## Features
 
 - ✅ **Zero Runtime Overhead:** All code is generated at compile time.
+- ✅ **Protocol Support:** Works on protocol definitions (generates async signatures without bodies).
 - ✅ **Smart Detection:** Automatically detects if the function should throw errors (for `Result` types) or just return values.
 - ✅ **Generic Support:** Works perfectly with `<T: Model>`, arrays `[T]`, and complex signatures.
-- ✅ **Attribute Handling:** Correctly parses `@escaping` closures.
 
 ---
 
@@ -34,7 +34,7 @@ Add it to your `dependencies` in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/theLastOrbit/swift-macros-AddAsync.git", from: "1.0.0")
+    .package(url: "https://github.com/theLastOrbit/swift-macros-AddAsync.git", from: "1.1.0")
 ]
 ```
 
@@ -73,7 +73,31 @@ func fetchUser(id: String) async throws -> User {
 }
 ```
 
-### 2. Generics & Optionals (Async)
+### 2. Protocols (Signatures Only)
+
+You can use `@AddAsync` in protocols. It will generate the `async` requirement signature automatically.
+
+**Code:**
+
+```swift
+protocol NetworkService {
+    @AddAsync
+    func fetchConfig(completion: @escaping (Result<Config, Error>) -> Void)
+}
+```
+
+**Generated Requirement (Invisible):**
+
+```swift
+protocol NetworkService {
+    func fetchConfig(completion: @escaping (Result<Config, Error>) -> Void)
+
+    // Generated:
+    func fetchConfig() async throws -> Config
+}
+```
+
+### 3. Generics & Optionals
 
 If your completion handler returns a standard value (like `T?` or `[T]?`), the generated function will be `async` (non-throwing) and preserve all generic constraints.
 

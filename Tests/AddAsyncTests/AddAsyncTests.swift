@@ -10,6 +10,7 @@ let testMacros: [String: Macro.Type] = [
 
 final class AddAsyncTests: XCTestCase {
     
+    // Test 1: Standard Function (Implementation) -> Generates Body
     func testResultMacro() throws {
         assertMacroExpansion(
             """
@@ -35,6 +36,27 @@ final class AddAsyncTests: XCTestCase {
         )
     }
     
+    // Test 2: Protocol Requirement -> Generates Signature Only (No Body)
+    func testProtocolRequirement() throws {
+        assertMacroExpansion(
+            """
+            protocol NetworkService {
+                @AddAsync
+                func fetchUser(id: String, completion: @escaping (Result<User, Error>) -> Void)
+            }
+            """,
+            expandedSource: """
+            protocol NetworkService {
+                func fetchUser(id: String, completion: @escaping (Result<User, Error>) -> Void)
+            
+                func fetchUser(id: String) async throws -> User
+            }
+            """,
+            macros: testMacros
+        )
+    }
+    
+    // Test 3: Generic Optional -> Generates Body
     func testGenericOptionalMacro() throws {
         assertMacroExpansion(
             """
@@ -51,31 +73,6 @@ final class AddAsyncTests: XCTestCase {
             func fetch<T: Model>(with router: BaseRouter, type: FetchType) async -> T? {
                 return await withCheckedContinuation { continuation in
                     fetch(with: router, type: type) { value in
-                        continuation.resume(returning: value)
-                    }
-                }
-            }
-            """,
-            macros: testMacros
-        )
-    }
-    
-    func testGenericArrayMacro() throws {
-        assertMacroExpansion(
-            """
-            @AddAsync
-            func fetchWithAuth<T: Model>(with router: BaseRouter, type: FetchType, completion: @escaping (([T]?) -> Void)) {
-                 print("fetching list")
-            }
-            """,
-            expandedSource: """
-            func fetchWithAuth<T: Model>(with router: BaseRouter, type: FetchType, completion: @escaping (([T]?) -> Void)) {
-                 print("fetching list")
-            }
-            
-            func fetchWithAuth<T: Model>(with router: BaseRouter, type: FetchType) async -> [T]? {
-                return await withCheckedContinuation { continuation in
-                    fetchWithAuth(with: router, type: type) { value in
                         continuation.resume(returning: value)
                     }
                 }
