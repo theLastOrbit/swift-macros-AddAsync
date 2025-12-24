@@ -91,8 +91,13 @@ public struct AddAsyncMacro: PeerMacro {
             return [
                 """
                 \(raw: modifiers)func \(raw: funcName)\(raw: genericClause)(\(raw: newParamsString)) async throws -> \(returnType)\(raw: whereClause) {
+                    var hasResumed = false
                     return try await withCheckedThrowingContinuation { continuation in
                         \(raw: funcName)(\(raw: callArguments)) { result in
+                            guard !hasResumed else {
+                                return 
+                            }
+                            hasResumed = true
                             continuation.resume(with: result)
                         }
                     }
@@ -103,8 +108,13 @@ public struct AddAsyncMacro: PeerMacro {
             return [
                 """
                 \(raw: modifiers)func \(raw: funcName)\(raw: genericClause)(\(raw: newParamsString)) async -> \(returnType)\(raw: whereClause) {
+                    var hasResumed = false
                     return await withCheckedContinuation { continuation in
                         \(raw: funcName)(\(raw: callArguments)) { value in
+                            guard !hasResumed else { 
+                                return 
+                            }
+                            hasResumed = true
                             continuation.resume(returning: value)
                         }
                     }

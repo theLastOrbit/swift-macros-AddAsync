@@ -25,8 +25,13 @@ final class AddAsyncTests: XCTestCase {
             }
             
             func fetch() async throws -> String {
+                var hasResumed = false
                 return try await withCheckedThrowingContinuation { continuation in
                     fetch() { result in
+                        guard !hasResumed else {
+                            return
+                        }
+                        hasResumed = true
                         continuation.resume(with: result)
                     }
                 }
@@ -71,8 +76,13 @@ final class AddAsyncTests: XCTestCase {
             }
             
             func fetch<T: Model>(with router: BaseRouter, type: FetchType) async -> T? {
+                var hasResumed = false
                 return await withCheckedContinuation { continuation in
                     fetch(with: router, type: type) { value in
+                        guard !hasResumed else {
+                            return
+                        }
+                        hasResumed = true
                         continuation.resume(returning: value)
                     }
                 }
